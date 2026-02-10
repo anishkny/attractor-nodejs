@@ -233,7 +233,7 @@ export class DotParser {
 
     // Number
     if (/^-?\d+$/.test(value)) {
-      return parseInt(value);
+      return parseInt(value, 10);
     }
     if (/^-?\d+\.\d+$/.test(value)) {
       return parseFloat(value);
