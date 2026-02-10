@@ -1,0 +1,13 @@
+// Example with retries
+digraph Retry {
+    graph [goal="Fetch data with retries", default_max_retry=3]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    fetch [label="Fetch Data", prompt="Fetch data from API", max_retries=3]
+    process [label="Process", prompt="Process the fetched data"]
+
+    start -> fetch -> process -> exit
+}
