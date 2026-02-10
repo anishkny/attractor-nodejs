@@ -1,0 +1,26 @@
+// Example with tool execution
+digraph ToolExample {
+    graph [goal="Execute shell commands"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    list_files [
+        shape=parallelogram,
+        type="tool",
+        label="List Files",
+        tool_command="ls -la",
+        timeout="5s"
+    ]
+    
+    echo_test [
+        shape=parallelogram,
+        type="tool",
+        label="Echo Test",
+        tool_command="echo 'Hello from Attractor'",
+        timeout="5s"
+    ]
+
+    start -> list_files -> echo_test -> exit
+}

@@ -1,0 +1,33 @@
+{
+  "name": "attractor-nodejs",
+  "version": "1.0.0",
+  "description": "A DOT-based pipeline runner for orchestrating multi-stage AI workflows",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "lint": "echo 'No linter configured yet'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anishkny/attractor-nodejs.git"
+  },
+  "keywords": [
+    "pipeline",
+    "workflow",
+    "orchestration",
+    "ai",
+    "llm",
+    "graphviz",
+    "dot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/anishkny/attractor-nodejs/issues"
+  },
+  "homepage": "https://github.com/anishkny/attractor-nodejs#readme"
+}
