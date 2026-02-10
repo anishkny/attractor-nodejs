@@ -1,0 +1,25 @@
+// Example with human-in-the-loop
+digraph HumanGate {
+    graph [goal="Human approval workflow"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    prepare [label="Prepare", prompt="Prepare the deployment"]
+    
+    review_gate [
+        shape=hexagon,
+        type="wait.human",
+        label="Review Changes"
+    ]
+
+    deploy [label="Deploy", prompt="Deploy to production"]
+    cancel [label="Cancel", prompt="Cancel deployment"]
+
+    start -> prepare -> review_gate
+    review_gate -> deploy  [label="[A] Approve"]
+    review_gate -> cancel  [label="[C] Cancel"]
+    deploy -> exit
+    cancel -> exit
+}

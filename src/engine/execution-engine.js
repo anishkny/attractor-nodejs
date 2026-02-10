@@ -14,6 +14,9 @@ import { StartHandler } from '../handlers/start-handler.js';
 import { ExitHandler } from '../handlers/exit-handler.js';
 import { CodergenHandler } from '../handlers/codergen-handler.js';
 import { ConditionalHandler } from '../handlers/conditional-handler.js';
+import { ToolHandler } from '../handlers/tool-handler.js';
+import { WaitForHumanHandler } from '../handlers/wait-human-handler.js';
+import { AutoApproveInterviewer } from '../models/interviewer.js';
 
 export class ExecutionEngine {
   constructor(config = {}) {
@@ -21,11 +24,16 @@ export class ExecutionEngine {
     this.registry = new HandlerRegistry();
     this.edgeSelector = new EdgeSelector();
     
+    // Use provided interviewer or auto-approve by default
+    const interviewer = config.interviewer || new AutoApproveInterviewer();
+    
     // Register built-in handlers
     this.registry.register('start', new StartHandler());
     this.registry.register('exit', new ExitHandler());
     this.registry.register('codergen', new CodergenHandler(config.backend));
     this.registry.register('conditional', new ConditionalHandler());
+    this.registry.register('tool', new ToolHandler());
+    this.registry.register('wait.human', new WaitForHumanHandler(interviewer));
     
     // Set default handler
     this.registry.setDefault(new CodergenHandler(config.backend));

@@ -13,5 +13,17 @@ export { StartHandler } from './handlers/start-handler.js';
 export { ExitHandler } from './handlers/exit-handler.js';
 export { CodergenHandler } from './handlers/codergen-handler.js';
 export { ConditionalHandler } from './handlers/conditional-handler.js';
+export { ToolHandler } from './handlers/tool-handler.js';
+export { WaitForHumanHandler } from './handlers/wait-human-handler.js';
 export { EdgeSelector } from './engine/edge-selector.js';
 export { RetryPolicy } from './engine/retry.js';
+export { 
+  Interviewer, 
+  AutoApproveInterviewer, 
+  QueueInterviewer,
+  Question,
+  Answer,
+  Option,
+  QuestionType,
+  AnswerValue
+} from './models/interviewer.js';

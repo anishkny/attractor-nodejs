@@ -34,12 +34,40 @@ export class DotParser {
   }
 
   parseStatements(content, graph) {
-    const lines = content.split(/[;\n]/).map(l => l.trim()).filter(l => l);
+    // First, split into meaningful statements
+    // Handle both ; and newline as separators, but be careful with attributes
+    const statements = [];
+    let current = '';
+    let inBrackets = 0;
+    
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+      
+      if (char === '[') {
+        inBrackets++;
+        current += char;
+      } else if (char === ']') {
+        inBrackets--;
+        current += char;
+      } else if ((char === ';' || char === '\n') && inBrackets === 0) {
+        if (current.trim()) {
+          statements.push(current.trim());
+        }
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    if (current.trim()) {
+      statements.push(current.trim());
+    }
 
-    for (const line of lines) {
+    for (const line of statements) {
       // Graph attributes
       if (line.startsWith('graph [')) {
-        const attrs = this.parseAttributes(line);
+        const attrBlock = line.substring(5).trim(); // Remove "graph"
+        const attrs = this.parseAttributes(attrBlock);
         Object.assign(graph.attrs, attrs);
         continue;
       }
@@ -74,15 +102,48 @@ export class DotParser {
   }
 
   parseEdgeStatement(line, graph) {
-    // Extract attributes if present
-    const attrMatch = line.match(/\[([^\]]+)\]\s*$/);
-    const attrs = attrMatch ? this.parseAttributes(`[${attrMatch[1]}]`) : {};
+    // Find attributes - look for the last [...] that's not inside quotes
+    let attrStart = -1;
+    let attrEnd = -1;
+    let inQuotes = false;
+    let bracketDepth = 0;
     
-    // Remove attributes from line for parsing nodes
-    const edgeLine = attrMatch ? line.replace(/\[([^\]]+)\]\s*$/, '') : line;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const prevChar = i > 0 ? line[i - 1] : '';
+      
+      if (char === '"' && prevChar !== '\\') {
+        inQuotes = !inQuotes;
+      } else if (!inQuotes) {
+        if (char === '[') {
+          if (bracketDepth === 0) {
+            attrStart = i;
+          }
+          bracketDepth++;
+        } else if (char === ']') {
+          bracketDepth--;
+          if (bracketDepth === 0 && attrStart !== -1) {
+            attrEnd = i + 1;
+          }
+        }
+      }
+    }
     
-    // Split by ->
-    const nodeIds = edgeLine.split('->').map(id => id.trim());
+    let attrs = {};
+    let edgeLine = line;
+    
+    if (attrStart !== -1 && attrEnd !== -1) {
+      const attrBlock = line.substring(attrStart, attrEnd);
+      attrs = this.parseAttributes(attrBlock);
+      edgeLine = line.substring(0, attrStart).trim();
+    }
+    
+    // Split by -> and extract just the node identifiers
+    const nodeIds = edgeLine.split('->').map(id => {
+      // Extract just the identifier, not any following content
+      const match = id.trim().match(/^(\w+)/);
+      return match ? match[1] : id.trim();
+    });
     
     // Create edges (chained edges share attributes)
     for (let i = 0; i < nodeIds.length - 1; i++) {
@@ -103,11 +164,15 @@ export class DotParser {
 
   parseAttributes(attrBlock) {
     const attrs = {};
-    const match = attrBlock.match(/\[([^\]]+)\]/);
-    if (!match) return attrs;
-
-    const content = match[1];
-    // Split by comma, but not within quotes
+    
+    // Find the content between the outermost brackets
+    if (!attrBlock.startsWith('[') || !attrBlock.endsWith(']')) {
+      return attrs;
+    }
+    
+    const content = attrBlock.substring(1, attrBlock.length - 1);
+    
+    // Split by comma, but not within quotes or brackets
     const pairs = this.splitAttributePairs(content);
 
     for (const pair of pairs) {
