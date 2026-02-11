@@ -39,6 +39,12 @@ Specify a custom logs directory:
 node src/cli.js examples/simple.dot ./my-logs
 ```
 
+Resume from a checkpoint:
+
+```bash
+node src/cli.js examples/simple.dot ./my-logs --resume
+```
+
 ### Programmatic API
 
 ```javascript
@@ -54,6 +60,10 @@ const engine = new ExecutionEngine();
 const result = await engine.run(graph, './logs');
 
 console.log('Pipeline completed:', result.status);
+
+// Resume from checkpoint
+const resumedResult = await engine.resume(graph, './logs');
+console.log('Pipeline resumed:', resumedResult.status);
 ```
 
 ## DOT Format
@@ -138,8 +148,8 @@ npm test
 ### Execution Flow
 
 1. Parse DOT file into Graph model
-2. Initialize Context and Checkpoint
-3. Traverse from start node
+2. Initialize Context and Checkpoint (or restore from checkpoint if resuming)
+3. Traverse from start node (or resume from checkpoint node)
 4. Execute each node via appropriate handler
 5. Apply context updates
 6. Select next edge based on outcome
@@ -153,6 +163,9 @@ See the `examples/` directory for sample workflows:
 - `simple.dot` - Linear workflow
 - `branch.dot` - Conditional branching
 - `retry.dot` - Retry configuration
+- `tool.dot` - External command execution
+- `human-gate.dot` - Human approval workflow
+- `parallel.dot` - Parallel execution (fan-out/fan-in)
 
 ## Node.js 24 Requirement
 
