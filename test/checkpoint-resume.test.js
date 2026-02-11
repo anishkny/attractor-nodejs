@@ -4,6 +4,7 @@
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
+import { tmpdir } from 'os';
 import { ExecutionEngine } from '../src/engine/execution-engine.js';
 import { parseDot } from '../src/parser/dot-parser.js';
 import { Checkpoint } from '../src/models/checkpoint.js';
@@ -11,7 +12,7 @@ import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 
 describe('Checkpoint Resume', () => {
-  const testLogsDir = '/tmp/checkpoint-test-logs';
+  const testLogsDir = join(tmpdir(), 'checkpoint-test-logs');
 
   beforeEach(async () => {
     // Create test logs directory
