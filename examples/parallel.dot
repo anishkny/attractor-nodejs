@@ -1,0 +1,29 @@
+// Example with parallel execution
+digraph ParallelExample {
+    graph [goal="Execute tasks in parallel"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    prepare [label="Prepare", prompt="Prepare the environment"]
+    
+    fan_out [shape=component, label="Parallel Tasks"]
+    
+    task_a [label="Task A", prompt="Execute task A"]
+    task_b [label="Task B", prompt="Execute task B"]
+    task_c [label="Task C", prompt="Execute task C"]
+    
+    fan_in [shape=tripleoctagon, label="Merge Results"]
+    
+    finalize [label="Finalize", prompt="Combine all results"]
+
+    start -> prepare -> fan_out
+    fan_out -> task_a
+    fan_out -> task_b
+    fan_out -> task_c
+    task_a -> fan_in
+    task_b -> fan_in
+    task_c -> fan_in
+    fan_in -> finalize -> exit
+}

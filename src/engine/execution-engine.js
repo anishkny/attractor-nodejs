@@ -16,6 +16,8 @@ import { CodergenHandler } from '../handlers/codergen-handler.js';
 import { ConditionalHandler } from '../handlers/conditional-handler.js';
 import { ToolHandler } from '../handlers/tool-handler.js';
 import { WaitForHumanHandler } from '../handlers/wait-human-handler.js';
+import { ParallelHandler } from '../handlers/parallel-handler.js';
+import { ParallelFanInHandler } from '../handlers/parallel-fan-in-handler.js';
 import { AutoApproveInterviewer } from '../models/interviewer.js';
 
 export class ExecutionEngine {
@@ -34,6 +36,8 @@ export class ExecutionEngine {
     this.registry.register('conditional', new ConditionalHandler());
     this.registry.register('tool', new ToolHandler());
     this.registry.register('wait.human', new WaitForHumanHandler(interviewer));
+    this.registry.register('parallel', new ParallelHandler());
+    this.registry.register('parallel.fan_in', new ParallelFanInHandler());
     
     // Set default handler
     this.registry.setDefault(new CodergenHandler(config.backend));
