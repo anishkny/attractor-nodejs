@@ -147,6 +147,135 @@ export class ExecutionEngine {
     };
   }
 
+  /**
+   * Resume execution from a checkpoint
+   * @param {Graph} graph - The pipeline graph
+   * @param {string} logsRoot - Path to logs directory containing checkpoint
+   * @returns {Promise<Object>} Execution result
+   */
+  async resume(graph, logsRoot) {
+    // Load checkpoint
+    const checkpointPath = join(logsRoot, 'checkpoint.json');
+    const checkpoint = await Checkpoint.load(checkpointPath);
+
+    // Restore context from checkpoint
+    const context = new Context();
+    context.applyUpdates(checkpoint.contextValues);
+    context.logs = checkpoint.logs || [];
+    
+    // Mirror graph attributes (may override some checkpoint values)
+    this.mirrorGraphAttributes(graph, context);
+
+    // Restore state from checkpoint
+    const completedNodes = [...checkpoint.completedNodes];
+    const nodeOutcomes = {}; // Note: outcomes are not persisted in checkpoint
+    const retryCounts = { ...checkpoint.nodeRetries };
+
+    // Find the node to resume from
+    let currentNode = graph.getNode(checkpoint.currentNode);
+    if (!currentNode) {
+      throw new Error(`Cannot resume: checkpoint node ${checkpoint.currentNode} not found in graph`);
+    }
+
+    // If the checkpoint node was already completed, advance to next node
+    if (completedNodes.includes(currentNode.id)) {
+      // Select next edge based on last known state
+      const nextEdge = this.edgeSelector.selectEdge(currentNode, { status: StageStatus.SUCCESS }, context, graph);
+      if (nextEdge) {
+        currentNode = graph.getNode(nextEdge.to);
+      } else {
+        // No next edge, pipeline was already complete
+        return {
+          status: 'completed',
+          completedNodes,
+          nodeOutcomes,
+          resumed: true
+        };
+      }
+    }
+
+    // Continue execution from the current node using the main loop
+    // This is the same as run() but starting from a different point
+    while (true) {
+      // Step 1: Check for terminal node
+      if (graph.isTerminalNode(currentNode)) {
+        const [gateOk, failedGate] = this.checkGoalGates(graph, nodeOutcomes);
+        if (!gateOk && failedGate) {
+          const retryTarget = this.getRetryTarget(failedGate, graph);
+          if (retryTarget) {
+            currentNode = graph.getNode(retryTarget);
+            continue;
+          } else {
+            throw new Error(`Goal gate unsatisfied for node ${failedGate.id} and no retry target`);
+          }
+        }
+        break; // Exit the loop
+      }
+
+      // Step 2: Execute node handler with retry policy
+      const handler = this.registry.resolve(currentNode);
+      const retryPolicy = RetryPolicy.fromNode(currentNode, graph);
+      const outcome = await executeWithRetry(
+        handler,
+        currentNode,
+        context,
+        graph,
+        logsRoot,
+        retryPolicy,
+        retryCounts
+      );
+
+      // Step 3: Record completion
+      completedNodes.push(currentNode.id);
+      nodeOutcomes[currentNode.id] = outcome;
+
+      // Step 4: Apply context updates
+      context.applyUpdates(outcome.contextUpdates);
+      context.set('outcome', outcome.status);
+      if (outcome.preferredLabel) {
+        context.set('preferred_label', outcome.preferredLabel);
+      }
+
+      // Step 5: Save checkpoint
+      const newCheckpoint = new Checkpoint({
+        currentNode: currentNode.id,
+        completedNodes,
+        nodeRetries: retryCounts,
+        contextValues: context.snapshot(),
+        logs: context.logs
+      });
+      await newCheckpoint.save(checkpointPath);
+
+      // Step 6: Select next edge
+      const nextEdge = this.edgeSelector.selectEdge(currentNode, outcome, context, graph);
+      
+      if (!nextEdge) {
+        if (outcome.status === StageStatus.FAIL) {
+          throw new Error(`Stage ${currentNode.id} failed with no outgoing fail edge`);
+        }
+        break; // No more edges, exit
+      }
+
+      // Step 7: Advance to next node
+      const nextNodeId = nextEdge.to;
+      currentNode = graph.getNode(nextNodeId);
+      
+      if (!currentNode) {
+        throw new Error(`Next node ${nextNodeId} not found in graph`);
+      }
+    }
+
+    // Finalize
+    await this.writeManifest(logsRoot, graph);
+    
+    return {
+      status: 'completed',
+      completedNodes,
+      nodeOutcomes,
+      resumed: true
+    };
+  }
+
   mirrorGraphAttributes(graph, context) {
     // Mirror graph attributes into context
     for (const [key, value] of Object.entries(graph.attrs)) {
